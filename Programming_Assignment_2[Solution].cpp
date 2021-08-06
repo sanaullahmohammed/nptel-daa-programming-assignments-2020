@@ -1,92 +1,146 @@
-#include<iostream>
-#include<vector>
-#include<algorithm>
+#include <iostream>
+#include <cmath>
+#include <algorithm>
+#include <climits>
 
 using namespace std;
+struct Interval{
+	int e, s;
+};
 
+#define MAX_STUDENTS 100007
+Interval all_intervals[MAX_STUDENTS];
+
+bool comparator(Interval a, Interval b);
+bool interval_intersection(Interval a, Interval b);
+void arr_intersections(Interval arr[]);
+void input();
+void copy(Interval* a, Interval* b);
+bool try_array(Interval* all_intervals, Interval tmp, int index);
+void debug();
+
+int cakes, students, k, arr_indx, arr_intsec;
+Interval tmp;
+char output[20];
 int main()
 {
-    int Test, cakes, children, k, S, E;
+	input();	
+	arr_intersections(all_intervals);
 
-    scanf("%d",&Test);
+	int num_intsec = arr_intsec, gindex = arr_indx;
+	if(k == 0 && num_intsec > 0)
+		cout << "Bad\n";
+	else if(num_intsec == 0)
+		cout << "Good\n";
+	else if(k == 1 && num_intsec > 2)
+		cout << "Bad\n";
+    else if(num_intsec == 1)
+    {	
+    	// tmp = indx
+    	if(try_array(all_intervals, tmp, gindex))
+			cout << "Good\n";
 
-    while(Test--)
-    {
-        scanf("%d %d %d",&cakes,&children,&k);
+    	// tmp = indx + 1
+    	else if(try_array(all_intervals, tmp, gindex + 1))
+			cout << "Good\n";
 
-        vector<pair<int,int>> vectorPair;
-
-        for(int i = 0; i < children; i++)
-        {
-            scanf("%d %d",&S,&E);
-            vectorPair.push_back({S,E});
-        }
-
-        vectorPair.push_back({0,0});
-        vectorPair.push_back({cakes+1,cakes+1});
-
-        sort(vectorPair.begin(),vectorPair.end());
-
-        if(k == 0)
-        {
-            int cnt=0;
-            for(int i = 0; i < vectorPair.size()-1; i++)
-            {
-                for(int j = i+1; j < vectorPair.size(); i++)
-                {
-                    if(vectorPair[i].second < vectorPair[j].first)
-                        break;
-                    else
-                        cnt++;
-                }
-            }
-
-            if(cnt)
-                printf("Bad\n");
-            else
-                printf("Good\n");
-        }
-        
-        else
-        {
-            int check = 0;
-
-            for(int i=0; i+1 < vectorPair.size(); i++)
-            {
-                if(vectorPair[i].second >= vectorPair[i+1].first)
-                {
-                    check = 1;
-
-                    bool condition = false;
-
-                    pair<int,int> p = {vectorPair[i].first, vectorPair[i].second};
-
-                    int length = vectorPair[i].second-vectorPair[i].first;
-
-                    vectorPair.erase(vectorPair.begin()+i);
-
-                    for(int j = 0; j+1 < vectorPair.size(); j++)
-                    {
-                        if(vectorPair[j+1].first - vectorPair[j].second - 2 >= length)
-                            condition=true;
-                        else if(vectorPair[j+1].first <= vectorPair[j].second)
-                        {
-                            condition = false;
-                            break;
-                        }
-                    }
-
-                    if(condition)
-                        printf("Good\n");
-                    else
-                        printf("Bad\n");
-
-                    break;
-                }
-            }
-            if(check == 0)
-                printf("Good\n");
-        }
+		else
+			cout << "Bad\n";
     }
-    return 0;
+    else if(num_intsec == 2)
+    {
+    	// tmp = indx
+    	if(try_array(all_intervals, tmp, gindex))
+			cout << "Good\n";
+
+    	// tmp = indx + 1
+    	else if(try_array(all_intervals, tmp, gindex + 1))
+			cout << "Good\n";
+
+		// tmp = indx - 1
+    	else if(try_array(all_intervals, tmp, gindex - 1))
+			cout << "Good\n";
+
+		else
+			cout << "Bad\n";
+    }
+}
+
+bool comparator(Interval a, Interval b)
+{
+	return a.s < b.s;
+}
+
+bool interval_intersection(Interval a, Interval b)
+{
+	return a.e >= b.s;
+}
+
+
+void arr_intersections(Interval arr[])
+{
+	arr_indx = -1; arr_intsec = 0;
+	sort(all_intervals, all_intervals + students, comparator);
+
+	for(int i = 0; i < students - 1; i++)
+	{
+		if(interval_intersection(all_intervals[i], all_intervals[i+1]))
+		{
+			arr_intsec++;
+			arr_indx = i;
+		}
+	}
+}
+
+void input()
+{
+	cin >> cakes >> students >> k;
+
+	for(int i = 0; i < students; i++)
+	{
+		cin >> tmp.s >> tmp.e;
+		all_intervals[i] = tmp;
+	}
+}
+
+void copy(Interval* a, Interval* b)
+{
+	(*a).s = (*b).s;
+	(*a).e = (*b).e;
+}
+
+bool try_array(Interval* all_intervals, Interval tmp, int index)
+{
+	// take out index
+	copy(&tmp, &all_intervals[arr_indx]);	
+	int wanted = all_intervals[index].e - all_intervals[index].s + 1;
+	copy(&all_intervals[index], &all_intervals[students-1]);
+	copy(&all_intervals[students-1], &tmp);
+	students--;	
+	// sort
+	sort(all_intervals, all_intervals + students, comparator);
+	// check for intersections
+	arr_intersections(all_intervals);
+	if(arr_intsec > 0) 
+	{
+		students++;
+		sort(all_intervals, all_intervals + students, comparator);
+		return false;
+	}
+
+	// if none try inserting 
+	int available = max(all_intervals[0].s - 1, cakes - all_intervals[students-1].e);	
+    for(int i = 0; i < students-1 && available < wanted ; i++)
+    	available = max(available, all_intervals[i+1].s - all_intervals[i].e - 1);
+    students++;
+	sort(all_intervals, all_intervals + students, comparator);    
+    return (available >= wanted);
+}
+
+void debug()
+{
+	cout << "\n";
+	for(int i= 0; i < students; i++)
+		cout << all_intervals[i].s << " " << all_intervals[i].e << "\n";
+	cout << "\n";
 }
